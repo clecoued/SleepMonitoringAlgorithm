@@ -1,0 +1,65 @@
+## Revue globale
+
+Réaliser un algorithme capable d'établir les differents stades du sommeils
+
+
+## Facteurs environnementaux ayant une influence
+ * age (cf these page 67)
+ * genre (cf these page 66)
+ * café, alcools, nicotine
+ * maladies chroniques (apnée du sommeil, depression, )
+
+## Stades de sommeil
+Caracterisé par une mesure d'EEG(these - cf page 10)
+
+ * Etat de veille
+ * Sommeil non paradoxal - NREM episode
+     * Sommeil leger
+         * Stade 1
+         * Stade 2
+     * Sommeil Profond - Slow wave sleep
+         * Stade 3
+         * Stade 4
+ * Sommeil Paradoxal - REM(Rapid Eye Movement) episode
+
+**Epoque**: plage de temps de 20 ou 30 seconds
+
+**Periode totale de sommeil**: commence a partir de 3 periodes consecutives de stade 1 et jusqu'au dernier stade de sommeil.
+
+Temps passe au lit duquel est soustrait l'eveil precedant l'endormissement et celui de fin de nuit.
+
+**Temps total de sommeil**: periode totale de sommeil soustraite des eveils intra sommeils.
+
+**Efficience de sommeil**: rapport entre le temps total de sommeil et la periode totale de sommeil, et est exprime en pourcentage.
+
+
+## Parametres physiologiques
+
+### Conductance cardiaque
+-> transition sommeil Paradoxal, sommeil Non Paradoxal -> changement de rythme cardiaque
+-> Sommeil paradoxale -> rythme cardiaque + eleve
+
+Poincare plot ( axe X - RRi(n), axe Y - RRi(n+1) )
+## Explication anatomique
+
+HRV related to sympatic and sympathetic cardiac activity.
+Cardiovascular autonomic control
+
+## Algorithme
+
+ * nettoyage des echantillons 
+     * retirer les RR intervalles < 350ms et > 1500ms et les remplacer par une valeur interpolee lineairement
+
+ * ré-échantillonage
+     * analyse sur une fenetre de 120s glissante de 20s
+     * signal echantillone a 8Hz + 68 zeros pour atteindre 1024 point
+     * soustraction de la moyenne du signal
+     * fenetre de Hann (Hanning) + FFT
+
+ * extraction des features
+    * RR interval - Basse Frequence(BF) - ]0,04-0,15Hz]
+    * RR interval - Haute Frequence(HF) - ]0,15-0,40Hz[
+    * ratio BF / HF semble etre la feature characteristique des etats de sommeils
+
+
+ * classification

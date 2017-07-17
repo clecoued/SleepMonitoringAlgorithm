@@ -1,10 +1,10 @@
-# Nous voulons un cmake "récent" pour utiliser les dernières fonctionnalités
+# We want a recent CMake file
 cmake_minimum_required(VERSION 3.0)
 
-# Notre projet est étiqueté hello
+# The project
 project(SleepStageAlgo)
 
-# Crée des variables avec les fichiers à compiler
+# Create variables with files to be compiled
 set(SRCS
     main.cpp
     )
@@ -15,7 +15,6 @@ set(HEADERS
 
 # Include JsonCPP library
 set(JSONCPP_LIB_PATH /home/lecoucl/Projects/Sommeil/SleepStageAlgorithm/jsoncpp)
-
 include_directories(${JSONCPP_LIB_PATH}/include)
 
 # Include Boost library 

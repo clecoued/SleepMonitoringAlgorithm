@@ -1,4 +1,34 @@
-// writing on a text file
+/**
+ * @file main.cpp
+ * @author  clecoued <clement.lecouedic@aura.healthcare>
+ * @version 1.0
+ *
+ *
+ * @section LICENSE
+ *
+ * Sleep Stage Algorithm
+ * Copyright (C) 2017 Aura Healthcare
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>
+ *
+ * @section DESCRIPTION
+ *
+ * refer to Overview.mkd to get a detailed description of the algorithm
+ */
+
+
+
 #include <iostream>
 #include <fstream>
 #include <json/json.h>
@@ -11,6 +41,10 @@
 
 const static int TimeIntervalLength = 120; // in seconds
 const static int TimeIntervalShift = 20; //in seconds
+
+const static int MinRRIntervalValue = 300; // in milliseconds 
+const static int MaxRRIntervalValue = 1500; // in milliseconds
+const static float RRIntervalSamplingFrequency = 8.f; // in Hz
 
 boost::posix_time::ptime jsonToPtime(const Json::Value& iSample)
 {
@@ -46,32 +80,54 @@ void moveInterval(boost::posix_time::ptime& oIntervalStart,
   }
 
     std::cout << "Move Interval After - " << oIntervalStart << " " << oIntervalEnd << " " << oCurrentIntervalSamples.size() << std::endl;
-    std::cout << " --- DATA ---" << std::endl;
-    
-    BOOST_FOREACH(Json::Value lSample, oCurrentIntervalSamples)
+
+}
+
+void removeExtremeValues(std::vector<Json::Value>& ioCurrentSamples)
+{
+  int lCurrentRRInterval = 0;
+  std::vector<Json::Value>::iterator it;
+
+  for(it = ioCurrentSamples.begin(); it != ioCurrentSamples.end(); it++)
+  {
+    lCurrentRRInterval = (*it)["RrInterval"].asInt();
+
+    if(lCurrentRRInterval < MinRRIntervalValue || lCurrentRRInterval > MaxRRIntervalValue)
     {
-      std::cout << jsonToPtime(lSample) << " " << std::endl;
+      std::cout << "Remove Extreme Values " << std::endl;
+      ioCurrentSamples.erase(it);
+      it--;
     }
-
-    std::cout << " --- DATA ---<<" << std::endl;
-
+  } 
 }
 
-/*void removeExtremeValues(const std::vector<Json::Value>& iCurrentSamples)
+std::vector<int> resample(boost::posix_time::ptime iIntervalStart, 
+                          boost::posix_time::ptime iIntervalEnd,
+                          float iSamplingFrequency,
+                          const std::vector<Json::Value>& iCurrentSamples)
 {
-  std::cout << (*it)["RrInterval"].asInt() << std::endl;
+  float lSamplingStep = 1.f / iSamplingFrequency * 1000; //im ms 
+
+  boost::posix_time::time_duration lTd = iIntervalEnd - iIntervalStart;
+  std::cout << "Resample - " << lTd.total_milliseconds() << std::endl;
+  int lNbOfSamples = lTd.total_milliseconds() * 1.0 / lSamplingStep;
+  std::cout << "Resample - " << lNbOfSamples << std::endl;
+
+  return std::vector<int>();
 }
-
-std::vector<int> resample(const std::vector<Json::Value>& iCurrentSamples)
-{
-
-}*/
 
 void computeSamples(boost::posix_time::ptime iIntervalStart, 
                     boost::posix_time::ptime iIntervalEnd, 
-                    const std::vector<Json::Value>& iCurrentSamples)
+                    std::vector<Json::Value>& ioCurrentSamples)
 {
   std::cout << "Compute Samples " <<std::endl;
+
+  removeExtremeValues(ioCurrentSamples);
+
+  std::vector<int> lResampledRRInterval = resample(iIntervalStart, 
+                                                   iIntervalEnd, 
+                                                   RRIntervalSamplingFrequency, 
+                                                   ioCurrentSamples);
  /* BOOST_FOREACH(Json::Value lSample, iCurrentSamples)
   {
     std::cout << lSample << " " << std::endl;
@@ -81,11 +137,12 @@ void computeSamples(boost::posix_time::ptime iIntervalStart,
 
 int main ()  
 {
+  // parse json data from file 
   Json::Value lSleepDataJson;
   std::ifstream lSleepDataStream("data/Sommeil10MinSample.json", std::ifstream::binary);
   lSleepDataStream >> lSleepDataJson;
 
-  std::cout << lSleepDataJson.size(); 
+  // initialize interval 
   boost::posix_time::ptime lIntervalStart = jsonToPtime(lSleepDataJson[0]);
   boost::posix_time::ptime lIntervalEnd = lIntervalStart + boost::posix_time::seconds(TimeIntervalLength);
   std::cout << lIntervalStart << " " << lIntervalEnd << std::endl;
@@ -98,22 +155,18 @@ int main ()
   {
     lCurrentSample = lSleepDataJson[i];
     lCurrentSampleTimestamp = jsonToPtime(lCurrentSample);
+    
     // fullfill data samples on a specific interval [lIntervalStart, lIntervalStart + TimeWindowSize]
     if(lCurrentSampleTimestamp < lIntervalEnd) 
     {
       lCurrentSamplesInInterval.push_back(lCurrentSample);
-      //std::cout << " - " << lCurrentSampleTimestamp << std::endl;
-      //lSleepDataInInterval.push_back(lSleepDataJson[i])
     }
+    // process data and move to next interval
     else 
     {
-      //std::cout << " + " << lCurrentSampleTimestamp << std::endl;
       computeSamples(lIntervalStart, lIntervalEnd, lCurrentSamplesInInterval);
 
       moveInterval(lIntervalStart, lIntervalEnd, lCurrentSamplesInInterval, TimeIntervalShift); 
-
-      //cleanDataOutOfInterval();
-
     }
 
   }
