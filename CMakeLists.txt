@@ -7,9 +7,14 @@ project(SleepStageAlgo)
 # Create variables with files to be compiled
 set(SRCS
     main.cpp
+    SleepStageAlgorithm.cpp
+    Features.cpp
     )
     
 set(HEADERS
+	SleepStageAlgorithm.hpp
+	Features.hpp
+	DateHelper.hpp
     )
 
 
