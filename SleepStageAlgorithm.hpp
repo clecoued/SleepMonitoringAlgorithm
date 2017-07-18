@@ -32,6 +32,7 @@
 #include <json/json.h>
 #include <json/value.h>
 #include "Features.hpp"
+#include "DataSample.hpp"
 
  class SleepStageAlgorithm{
 
@@ -54,8 +55,8 @@
  		 * @param[in/out]     ioCurrentSamples  The current interval samples
  		 */
  		void processSamples(boost::posix_time::ptime iIntervalStart, 
-                    boost::posix_time::ptime iIntervalEnd, 
-                    std::vector<Json::Value>& ioCurrentSamples);
+                    		boost::posix_time::ptime iIntervalEnd, 
+                    		std::vector<DataSamplePtr>& ioCurrentSamples);
 
  	private:
  		/**
@@ -63,7 +64,7 @@
  		 *
  		 * @param      ioCurrentSamples The current interval samples
  		 */
- 		void removeExtremeValues(std::vector<Json::Value>& ioCurrentSamples);
+ 		void removeExtremeValues(std::vector<DataSamplePtr>& ioCurrentSamples);
 		
 		/**
 		 * @brief      resampling the current interval samples to RRIntervalSamplingFrequency
@@ -76,9 +77,9 @@
 		 * @return     the resampled data
 		 */
 		std::vector<int> resample(boost::posix_time::ptime iIntervalStart, 
-                          boost::posix_time::ptime iIntervalEnd,
-                          float iSamplingFrequency,
-                          const std::vector<Json::Value>& iCurrentSamples);
+                          		  boost::posix_time::ptime iIntervalEnd,
+                         		  float iSamplingFrequency,
+                          		  const std::vector<DataSamplePtr>& iCurrentSamples);
 
 
 		/**

@@ -34,26 +34,23 @@
 #include <vector>
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "SleepStageAlgorithm.hpp"
-#include "DateHelper.hpp"
 
 const static int TimeIntervalLength = 120; // in seconds
 const static int TimeIntervalShift = 20; //in seconds
 
-//static boost::posix_time::ptime initialTimestamp;
-
 void moveInterval(boost::posix_time::ptime& oIntervalStart, 
                   boost::posix_time::ptime& oIntervalEnd,
-                  std::vector<Json::Value>& oCurrentIntervalSamples,
+                  std::vector<DataSamplePtr>& oCurrentIntervalSamples,
                   int iTimeIntervalShift )
 {
   oIntervalStart += boost::posix_time::seconds(iTimeIntervalShift);
   oIntervalEnd += boost::posix_time::seconds(iTimeIntervalShift);
 
   //std::cout << "Move Interval Before - " << oCurrentIntervalSamples.size() << std::endl;
-  std::vector<Json::Value>::iterator it;
+  std::vector<DataSamplePtr>::iterator it;
   for(it = oCurrentIntervalSamples.begin(); it != oCurrentIntervalSamples.end(); it++)
   {
-    if(DateHelper::jsonToPtime(*it) < oIntervalStart)
+    if((*it)->getTimestamp() < oIntervalStart)
     {
       oCurrentIntervalSamples.erase(it);
       it--;
@@ -82,8 +79,7 @@ int main ()
 
   Json::Value lCurrentSample; 
   boost::posix_time::ptime lCurrentSampleTimestamp;
-  std::vector<Json::Value> lCurrentSamplesInInterval;
-
+  std::vector<DataSamplePtr> lCurrentSamplesInInterval;
 
   SleepStageAlgorithm * lSleepStageAlgorithm = new SleepStageAlgorithm();
 
@@ -95,7 +91,8 @@ int main ()
     // fullfill data samples on a specific interval [lIntervalStart, lIntervalStart + TimeWindowSize]
     if(lCurrentSampleTimestamp < lIntervalEnd) 
     {
-      lCurrentSamplesInInterval.push_back(lCurrentSample);
+      DataSamplePtr lDataSamplePtr(new DataSample(lCurrentSample));
+      lCurrentSamplesInInterval.push_back(lDataSamplePtr);
     }
     // process data and move to next interval
     else 

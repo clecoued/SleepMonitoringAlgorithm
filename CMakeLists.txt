@@ -15,6 +15,7 @@ set(HEADERS
 	SleepStageAlgorithm.hpp
 	Features.hpp
 	DateHelper.hpp
+	DataSample.hpp
     )
 
 

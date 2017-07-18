@@ -30,7 +30,6 @@
 #include "SleepStageAlgorithm.hpp"
 #include <boost/foreach.hpp>
 #include <fftw3.h>
-#include "DateHelper.hpp"
 
 /**
  * @brief      process a batch of samples fetched on a specified interval [iIntervalStart, iIntervalEnd]
@@ -39,9 +38,9 @@
  * @param[in]  iIntervalEnd      The timestamt mesured at interval end
  * @param[in/out]     ioCurrentSamples  The current interval samples
  */
-void SleepStageAlgorithm::processSamples(boost::posix_time::ptime iIntervalStart, 
-                    boost::posix_time::ptime iIntervalEnd, 
-                    std::vector<Json::Value>& ioCurrentSamples)
+void SleepStageAlgorithm::processSamples(boost::posix_time::ptime iIntervalStart,
+                                         boost::posix_time::ptime iIntervalEnd,
+                                         std::vector<DataSamplePtr>& ioCurrentSamples)
 {
   removeExtremeValues(ioCurrentSamples);
 
@@ -62,14 +61,14 @@ void SleepStageAlgorithm::processSamples(boost::posix_time::ptime iIntervalStart
  *
  * @param      ioCurrentSamples The current interval samples
  */
-void SleepStageAlgorithm::removeExtremeValues(std::vector<Json::Value>& ioCurrentSamples)
+void SleepStageAlgorithm::removeExtremeValues(std::vector<DataSamplePtr>& ioCurrentSamples)
 {
   int lCurrentRRInterval = 0;
-  std::vector<Json::Value>::iterator it;
+  std::vector<DataSamplePtr>::iterator it;
 
   for(it = ioCurrentSamples.begin(); it != ioCurrentSamples.end(); it++)
   {
-    lCurrentRRInterval = (*it)["RrInterval"].asInt();
+    lCurrentRRInterval = (*it)->getRrInterval();
 
     if(lCurrentRRInterval < MinRRIntervalValue || lCurrentRRInterval > MaxRRIntervalValue)
     {
@@ -92,7 +91,7 @@ void SleepStageAlgorithm::removeExtremeValues(std::vector<Json::Value>& ioCurren
 std::vector<int> SleepStageAlgorithm::resample(boost::posix_time::ptime iIntervalStart, 
                                                boost::posix_time::ptime iIntervalEnd,
                                                float iSamplingFrequency,
-                                               const std::vector<Json::Value>& iCurrentSamples)
+                                               const std::vector<DataSamplePtr>& iCurrentSamples)
 {
   float lSamplingStep = 1.f / iSamplingFrequency * 1000; //im ms 
   std::vector<int> oResampledRRInterval;
@@ -100,11 +99,11 @@ std::vector<int> SleepStageAlgorithm::resample(boost::posix_time::ptime iInterva
   boost::posix_time::time_duration lTd = iIntervalEnd - iIntervalStart;
   int lNbOfSamples = lTd.total_milliseconds() * 1.0 / lSamplingStep;
 
-  std::vector<Json::Value>::const_iterator it = iCurrentSamples.begin();
+  std::vector<DataSamplePtr>::const_iterator it = iCurrentSamples.begin();
 
-  boost::posix_time::ptime t1 = DateHelper::jsonToPtime(*it);
+  boost::posix_time::ptime t1 = (*it)->getTimestamp();
   int i1 = std::floor( (t1 - iIntervalStart).total_milliseconds() * 1.f / lSamplingStep) + 1;
-  int rr1 = (*it)["RrInterval"].asInt();
+  int rr1 = (*it)->getRrInterval();
 
   for(int i = 0; i < i1; i++)
   {
@@ -119,9 +118,9 @@ std::vector<int> SleepStageAlgorithm::resample(boost::posix_time::ptime iInterva
 
   for(; it != iCurrentSamples.end();it++)
   {
-    t2 = DateHelper::jsonToPtime(*it);
+    t2 = (*it)->getTimestamp();
     i2 = std::floor( (t2 - iIntervalStart).total_milliseconds() * 1.f / lSamplingStep);
-    rr2 = (*it)["RrInterval"].asInt();
+    rr2 = (*it)->getRrInterval();
 
     float alpha = (rr2 - rr1) * 1.f /( (t2 - t1).total_milliseconds() );
     for(int i = (i1 + 1); i <= i2; i++)
@@ -234,7 +233,7 @@ Features* SleepStageAlgorithm::extractFeatures(const std::vector<float>& iNormal
   double lTotalPower = lLowBandPower + lHighBandPower;
   lLowBandPower = lLowBandPower / lTotalPower * 100; // in %
   lHighBandPower = lHighBandPower / lTotalPower * 100; // in %
-  //std::cout << lLowBandPower << " " << lHighBandPower << " " << lLowBandPower / lHighBandPower << std::endl;
+  std::cout << lLowBandPower << " " << lHighBandPower << " " << lLowBandPower / lHighBandPower << std::endl;
 
   fftw_destroy_plan(lPlan);
 
