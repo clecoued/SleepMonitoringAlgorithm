@@ -42,11 +42,44 @@
 const static int TimeIntervalLength = 120; // in seconds
 const static int TimeIntervalShift = 20; //in seconds
 
-const static int MinRRIntervalValue = 300; // in milliseconds 
+const static int MinRRIntervalValue = 350; // in milliseconds 
 const static int MaxRRIntervalValue = 1500; // in milliseconds
 const static float RRIntervalSamplingFrequency = 8.f; // in Hz
 
+const static int FFTNumberOfSamples = 1024;
+
+const static double LowFrequencyBandMin = 0.04; // in Hz
+const static double LowFrequencyBandMax = 0.15; //in Hz
+
+const static double HighFrequencyBandMin = 0.15; //in Hz
+const static double HighFrequencyBandMax = 0.40; //in Hz
 //static boost::posix_time::ptime initialTimestamp;
+
+class Features
+{
+
+  private:
+   double mLowFreqBandPower;
+   double mHighFreqBandPower;
+
+  public:
+    Features(double iLowFreqBandPower, double iHighFreqBandPower){
+      mLowFreqBandPower = iLowFreqBandPower;
+      mHighFreqBandPower = iHighFreqBandPower;
+    }
+
+    ~Features(){}
+
+    double getLowFreqBandPower()
+    {
+      return mLowFreqBandPower;
+    }
+
+    double getHighFreqBandPower()
+    {
+      return mHighFreqBandPower;
+    }
+};
 
 boost::posix_time::ptime jsonToPtime(const Json::Value& iSample)
 {
@@ -104,7 +137,7 @@ void removeExtremeValues(std::vector<Json::Value>& ioCurrentSamples)
 
 std::vector<float> normalizeSignal(const std::vector<int>& iResampledSamples)
 {
-  double lRrAverage = 0; 
+  double lRrAverage = 0;
   BOOST_FOREACH(int lRr, iResampledSamples)
   {
     lRrAverage += lRr;
@@ -112,18 +145,13 @@ std::vector<float> normalizeSignal(const std::vector<int>& iResampledSamples)
 
   lRrAverage = lRrAverage / iResampledSamples.size();
 
-  std::vector<float> oNormalizedSamples; 
+  std::vector<float> oNormalizedSamples;
   oNormalizedSamples.reserve(iResampledSamples.size());
 
   std::vector<int>::const_iterator it = iResampledSamples.begin();
   for(;it != iResampledSamples.end(); it++)
   {
     oNormalizedSamples.push_back((*it) - lRrAverage);
-  }
-
-  BOOST_FOREACH(float lNorm, oNormalizedSamples)
-  {
-    std::cout << " " << lNorm << std::endl;
   }
 
   return oNormalizedSamples;
@@ -194,7 +222,70 @@ std::vector<int> resample(boost::posix_time::ptime iIntervalStart,
   return oResampledRRInterval;
 }
 
-void extractFeatures(std::vector<float>& iNormalizedSamples)
+Features* extractFeatures(const std::vector<float>& iNormalizedSamples)
+{
+  // compute FFT
+  fftw_complex lSignal[FFTNumberOfSamples];
+  fftw_complex lResult[FFTNumberOfSamples];
+
+  fftw_plan lPlan = fftw_plan_dft_1d(FFTNumberOfSamples,
+                                    lSignal,
+                                    lResult,
+                                    FFTW_FORWARD,
+                                    FFTW_ESTIMATE);
+
+  // prepare input data
+  for(int i = 0; i < iNormalizedSamples.size(); i++)
+  {
+    // fill Real part
+    lSignal[i][0] = iNormalizedSamples.at(i);
+    // fill Imaginary part
+    lSignal[i][1] = 0;
+  }
+
+  for(int i = iNormalizedSamples.size(); i < FFTNumberOfSamples; i++)
+  {
+    // fill Real part
+    lSignal[i][0] = 0;
+    // fill Imaginary part
+    lSignal[i][1] = 0;
+  }
+
+  fftw_execute(lPlan);
+
+
+  // compute Low Freq Band Power and High Freq Band Power features
+  int lLowFreqMin = std::floor(LowFrequencyBandMin * FFTNumberOfSamples / RRIntervalSamplingFrequency);
+  int lLowFreqMax = std::floor(LowFrequencyBandMax * FFTNumberOfSamples / RRIntervalSamplingFrequency);
+  int lHighFreqMin = std::floor(HighFrequencyBandMin * FFTNumberOfSamples / RRIntervalSamplingFrequency);
+  int lHighFreqMax = std::floor(HighFrequencyBandMax * FFTNumberOfSamples / RRIntervalSamplingFrequency);
+
+  double lLowBandPower = 0.0;
+  double lHighBandPower = 0.0;
+  double lAmplitude = 0;
+  for(int i = lLowFreqMin + 1; i <= lLowFreqMax; i++  )
+  {
+      lAmplitude = std::sqrt(lResult[i][0]*lResult[i][0] + lResult[i][1]*lResult[i][1] );
+      lLowBandPower += lAmplitude;
+  }
+
+  for(int i = lHighFreqMin + 1; i <= lHighFreqMax; i++)
+  {
+    lAmplitude = std::sqrt(lResult[i][0]*lResult[i][0] + lResult[i][1]*lResult[i][1] );
+    lHighBandPower += lAmplitude;
+  }
+
+  double lTotalPower = lLowBandPower + lHighBandPower;
+  lLowBandPower = lLowBandPower / lTotalPower * 100; // in %
+  lHighBandPower = lHighBandPower / lTotalPower * 100; // in %
+  std::cout << lLowBandPower << " " << lHighBandPower << " " << lLowBandPower / lHighBandPower << std::endl;
+
+  fftw_destroy_plan(lPlan);
+
+  return new Features(lLowBandPower, lHighBandPower);
+}
+
+void classifySleepState(Features * iFeatures)
 {
 
 }
@@ -219,7 +310,8 @@ void computeSamples(boost::posix_time::ptime iIntervalStart,
                                                     ioCurrentSamples);
 
   std::vector<float> lNormalizedRRIntervals = normalizeSignal(lResampledRRIntervals);
-  extractFeatures(lNormalizedRRIntervals);
+  Features * lFeatures = extractFeatures(lNormalizedRRIntervals);
+  classifySleepState(lFeatures);
 }
 
 

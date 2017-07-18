@@ -25,4 +25,4 @@ INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 FIND_LIBRARY(FFTW3_LIBRARIES NAMES fftw3 libfftw3 PATHS /usr/lib REQUIRED)
 
 add_executable(sleep_stage_algo ${SRCS} ${HEADERS})
-target_link_libraries(sleep_stage_algo ${JSONCPP_LIB_PATH}/src/lib_json/libjsoncpp.so ${Boost_LIBRARIES})
+target_link_libraries(sleep_stage_algo ${JSONCPP_LIB_PATH}/src/lib_json/libjsoncpp.so ${Boost_LIBRARIES} ${FFTW3_LIBRARIES})
