@@ -21,5 +21,8 @@ include_directories(${JSONCPP_LIB_PATH}/include)
 FIND_PACKAGE( Boost 1.40 COMPONENTS date_time REQUIRED )
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 
+# Include FFTW3 library
+FIND_LIBRARY(FFTW3_LIBRARIES NAMES fftw3 libfftw3 PATHS /usr/lib REQUIRED)
+
 add_executable(sleep_stage_algo ${SRCS} ${HEADERS})
 target_link_libraries(sleep_stage_algo ${JSONCPP_LIB_PATH}/src/lib_json/libjsoncpp.so ${Boost_LIBRARIES})

@@ -37,7 +37,7 @@
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
-
+#include <fftw3.h>
 
 const static int TimeIntervalLength = 120; // in seconds
 const static int TimeIntervalShift = 20; //in seconds
@@ -45,6 +45,8 @@ const static int TimeIntervalShift = 20; //in seconds
 const static int MinRRIntervalValue = 300; // in milliseconds 
 const static int MaxRRIntervalValue = 1500; // in milliseconds
 const static float RRIntervalSamplingFrequency = 8.f; // in Hz
+
+//static boost::posix_time::ptime initialTimestamp;
 
 boost::posix_time::ptime jsonToPtime(const Json::Value& iSample)
 {
@@ -64,7 +66,7 @@ void moveInterval(boost::posix_time::ptime& oIntervalStart,
   oIntervalStart += boost::posix_time::seconds(iTimeIntervalShift);
   oIntervalEnd += boost::posix_time::seconds(iTimeIntervalShift);
 
-  std::cout << "Move Interval Before - " << oCurrentIntervalSamples.size() << std::endl;
+  //std::cout << "Move Interval Before - " << oCurrentIntervalSamples.size() << std::endl;
   std::vector<Json::Value>::iterator it;
   for(it = oCurrentIntervalSamples.begin(); it != oCurrentIntervalSamples.end(); it++)
   {
@@ -79,7 +81,7 @@ void moveInterval(boost::posix_time::ptime& oIntervalStart,
     }
   }
 
-    std::cout << "Move Interval After - " << oIntervalStart << " " << oIntervalEnd << " " << oCurrentIntervalSamples.size() << std::endl;
+  //std::cout << "Move Interval After - " << oIntervalStart << " " << oIntervalEnd << " " << oCurrentIntervalSamples.size() << std::endl;
 }
 
 void removeExtremeValues(std::vector<Json::Value>& ioCurrentSamples)
@@ -93,11 +95,38 @@ void removeExtremeValues(std::vector<Json::Value>& ioCurrentSamples)
 
     if(lCurrentRRInterval < MinRRIntervalValue || lCurrentRRInterval > MaxRRIntervalValue)
     {
-      std::cout << "Remove Extreme Values " << std::endl;
+      //std::cout << "Remove Extreme Values " << std::endl;
       ioCurrentSamples.erase(it);
       it--;
     }
   } 
+}
+
+std::vector<float> normalizeSignal(const std::vector<int>& iResampledSamples)
+{
+  double lRrAverage = 0; 
+  BOOST_FOREACH(int lRr, iResampledSamples)
+  {
+    lRrAverage += lRr;
+  }
+
+  lRrAverage = lRrAverage / iResampledSamples.size();
+
+  std::vector<float> oNormalizedSamples; 
+  oNormalizedSamples.reserve(iResampledSamples.size());
+
+  std::vector<int>::const_iterator it = iResampledSamples.begin();
+  for(;it != iResampledSamples.end(); it++)
+  {
+    oNormalizedSamples.push_back((*it) - lRrAverage);
+  }
+
+  BOOST_FOREACH(float lNorm, oNormalizedSamples)
+  {
+    std::cout << " " << lNorm << std::endl;
+  }
+
+  return oNormalizedSamples;
 }
 
 std::vector<int> resample(boost::posix_time::ptime iIntervalStart, 
@@ -152,23 +181,47 @@ std::vector<int> resample(boost::posix_time::ptime iIntervalStart,
     oResampledRRInterval.push_back(rr1);
   }
 
+  /*boost::posix_time::ptime tFin;
+  int i = 0;
+
+  BOOST_FOREACH(int lRrValue, oResampledRRInterval)
+  {
+    tFin = iIntervalStart + boost::posix_time::milliseconds(i * lSamplingStep);
+    i++;
+    std::cout << (tFin - initialTimestamp).total_milliseconds() << " " << lRrValue << std::endl;
+  }*/
+
   return oResampledRRInterval;
+}
+
+void extractFeatures(std::vector<float>& iNormalizedSamples)
+{
+
 }
 
 void computeSamples(boost::posix_time::ptime iIntervalStart, 
                     boost::posix_time::ptime iIntervalEnd, 
                     std::vector<Json::Value>& ioCurrentSamples)
 {
-  std::cout << "Compute Samples " <<std::endl;
+ // std::cout << "Compute Samples " <<std::endl;
+
+ // BOOST_FOREACH(Json::Value lSample, ioCurrentSamples)
+ // {
+ //   std::cout << (jsonToPtime(lSample) - initialTimestamp).total_milliseconds() << " " << lSample["RrInterval"] << std::endl;
+ // }
+
 
   removeExtremeValues(ioCurrentSamples);
 
-  std::vector<int> lResampledRRInterval = resample(iIntervalStart, 
-                                                   iIntervalEnd, 
-                                                   RRIntervalSamplingFrequency, 
-                                                   ioCurrentSamples);
+  std::vector<int> lResampledRRIntervals = resample(iIntervalStart, 
+                                                    iIntervalEnd, 
+                                                    RRIntervalSamplingFrequency, 
+                                                    ioCurrentSamples);
 
+  std::vector<float> lNormalizedRRIntervals = normalizeSignal(lResampledRRIntervals);
+  extractFeatures(lNormalizedRRIntervals);
 }
+
 
 int main ()  
 {
@@ -179,8 +232,9 @@ int main ()
 
   // initialize interval 
   boost::posix_time::ptime lIntervalStart = jsonToPtime(lSleepDataJson[0]);
+  //initialTimestamp = lIntervalStart;
   boost::posix_time::ptime lIntervalEnd = lIntervalStart + boost::posix_time::seconds(TimeIntervalLength);
-  std::cout << lIntervalStart << " " << lIntervalEnd << std::endl;
+  //std::cout << lIntervalStart << " " << lIntervalEnd << std::endl;
 
   Json::Value lCurrentSample; 
   boost::posix_time::ptime lCurrentSampleTimestamp;
