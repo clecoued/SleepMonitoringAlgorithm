@@ -18,6 +18,8 @@ set(HEADERS
 	DataSample.hpp
     )
 
+#Compile with debug symbol
+set(CMAKE_BUILD_TYPE Debug)
 
 # Include JsonCPP library
 set(JSONCPP_LIB_PATH /home/lecoucl/Projects/Sommeil/SleepStageAlgorithm/jsoncpp)

@@ -93,8 +93,16 @@ std::vector<int> SleepStageAlgorithm::resample(boost::posix_time::ptime iInterva
                                                float iSamplingFrequency,
                                                const std::vector<DataSamplePtr>& iCurrentSamples)
 {
+
+
   float lSamplingStep = 1.f / iSamplingFrequency * 1000; //im ms 
   std::vector<int> oResampledRRInterval;
+
+    // do not resample interval with less than 2 data samples
+  if(iCurrentSamples.size() < 2)
+  {
+    return oResampledRRInterval;
+  }
 
   boost::posix_time::time_duration lTd = iIntervalEnd - iIntervalStart;
   int lNbOfSamples = lTd.total_milliseconds() * 1.0 / lSamplingStep;
@@ -161,6 +169,12 @@ std::vector<float> SleepStageAlgorithm::normalizeSignal(const std::vector<int>& 
   lRrAverage = lRrAverage / iResampledSamples.size();
 
   std::vector<float> oNormalizedSamples;
+  // do not normalize signal on empty data interval
+  if(iResampledSamples.size() == 0)
+  {
+    return oNormalizedSamples;
+  }
+
   oNormalizedSamples.reserve(iResampledSamples.size());
 
   std::vector<int>::const_iterator it = iResampledSamples.begin();
@@ -179,6 +193,13 @@ std::vector<float> SleepStageAlgorithm::normalizeSignal(const std::vector<int>& 
  */
 Features* SleepStageAlgorithm::extractFeatures(const std::vector<float>& iNormalizedSamples)
 {
+
+  // do not extract Features on empty data interval
+  if(iNormalizedSamples.size() == 0)
+  {
+    return new Features(0, 0);
+  }
+
   // compute FFT
   fftw_complex lSignal[FFTNumberOfSamples];
   fftw_complex lResult[FFTNumberOfSamples];
@@ -231,6 +252,7 @@ Features* SleepStageAlgorithm::extractFeatures(const std::vector<float>& iNormal
   }
 
   double lTotalPower = lLowBandPower + lHighBandPower;
+
   lLowBandPower = lLowBandPower / lTotalPower * 100; // in %
   lHighBandPower = lHighBandPower / lTotalPower * 100; // in %
   std::cout << lLowBandPower << " " << lHighBandPower << " " << lLowBandPower / lHighBandPower << std::endl;
