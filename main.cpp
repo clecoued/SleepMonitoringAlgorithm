@@ -68,7 +68,7 @@ int main ()
 {
   // parse json data from file 
   Json::Value lSleepDataJson;
-  std::ifstream lSleepDataStream("data/Sommeil10MinSample.json", std::ifstream::binary);
+  std::ifstream lSleepDataStream("data/PartialNight-01-08.json", std::ifstream::binary);
   lSleepDataStream >> lSleepDataJson;
 
   // initialize interval 

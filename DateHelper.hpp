@@ -45,8 +45,9 @@ class DateHelper{
 		 */
 		static boost::posix_time::ptime jsonToPtime(const Json::Value& iSample)
 		{
-		  std::string lTimestampString = iSample["Timestamp"].asString();
+		  std::string lTimestampString = iSample["time"].asString();
 		  boost::replace_all(lTimestampString, "T", " ");
+		  boost::replace_all(lTimestampString, "Z", "");
 		  boost::posix_time::ptime t( boost::posix_time::time_from_string(lTimestampString) );
 		  return t;
 		}

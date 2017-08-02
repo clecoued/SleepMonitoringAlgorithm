@@ -49,7 +49,7 @@ class DataSample
 
 		DataSample(Json::Value iJsonSample)
 		{
-			mRrInterval = iJsonSample["RrInterval"].asInt();
+			mRrInterval = iJsonSample["rr_interval"].asInt();
 			mTimestamp = DateHelper::jsonToPtime(iJsonSample);
 		}
 
